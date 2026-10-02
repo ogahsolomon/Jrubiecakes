@@ -77,7 +77,7 @@ Supabase. The variables the auth flow relies on:
 
 ## 6. Test it
 
-1. `npm run dev` and open `http://localhost:3000/login`.
+1. `npm run dev` and open `http://localhost:3001/login`.
 2. Click **Continue with Google** → complete the consent screen.
 3. You should land on `/account` with your Google name and avatar shown.
 

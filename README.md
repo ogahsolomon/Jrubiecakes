@@ -11,7 +11,7 @@ checkout, Paystack payments).
 | Frontend   | Next.js 15 (App Router), TypeScript, Tailwind CSS |
 | Backend    | Supabase (PostgreSQL, Auth, Storage, RLS) |
 | Payments   | Paystack (online), bank transfer, cash on delivery |
-| Email      | Mailgun (transactional templates) |
+| Email      | Brevo (transactional templates)      |
 | Testing    | Vitest (unit), `tsc --noEmit` (typecheck) |
 
 ## Quick start
@@ -77,15 +77,26 @@ Full walkthrough: **[docs/paystack-setup.md](docs/paystack-setup.md)**.
 > paid **only** after server-side verification or a valid webhook event. Amounts
 > are matched exactly against the order total. Processing is idempotent.
 
-### 4. Mailgun
+### 4. Brevo
 
-1. Add a domain at [mailgun.com](https://mailgun.com) and verify it (DKIM/SPF DNS records).
+1. Create an account at [brevo.com](https://brevo.com) and complete sender
+   verification (Brevo emails you a confirmation link).
 2. Put into `.env.local`:
-   - `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_FROM_EMAIL`
+   - `BREVO_API_KEY` — from **SMTP & API → API Keys → Generate a new API key**
+   - `BREVO_FROM_EMAIL` — a **verified sender** from **SMTP & API → Senders &
+     Domains** (either `orders@yourdomain.com` or the
+     `something@smtp-relay.brevo.com` address Brevo gives you on signup)
+   - `BREVO_FROM_NAME` — optional display name
    - `ADMIN_EMAIL` (receives new-order + contact notifications)
 3. Emails included: order confirmation (customer), new order (admin), payment
-   confirmation, order status updates. If Mailgun isn't configured the app still
+   confirmation, order status updates. If Brevo isn't configured the app still
    works — emails are skipped with a console warning.
+
+> Migrating from Mailgun? `BREVO_FROM_EMAIL` accepts the same
+> `"Name <address>"` format, so your old `MAILGUN_FROM_EMAIL` value can be
+> pasted straight in. Brevo has no per-domain URL segment, so `MAILGUN_DOMAIN`
+> has no equivalent — the sender address is verified inside Brevo instead.
+> Note Brevo's free tier caps at 300 emails/day.
 
 ### 5. Admin access
 
@@ -131,14 +142,14 @@ src/
       orders/                POST create order (server-side total recalculation)
       payments/paystack/     initialize (via orders route), verify, webhook
       settings/              public store settings endpoints
-      contact/               contact form → Mailgun
+      contact/               contact form → Brevo
     sitemap.ts robots.ts     SEO
   components/                UI + feature components (cart drawer, product card…)
   lib/
     supabase/                client (browser), server (RSC), admin (service role), middleware
     pricing.ts               Server-side cart pricing engine (never trusts client prices)
     paystack.ts              Init/verify/webhook signature helpers
-    mailgun.ts               Reusable mail service + templates
+    email.ts                Reusable mail service (Brevo) + templates
     catalog.ts               Data access + graceful setup-required states
   types/                     Hand-written Database types (with Relationships)
 supabase/schema.sql          Full schema: tables, indexes, RLS, storage, triggers, seed
@@ -158,11 +169,11 @@ public/products/             Real product photos extracted from the master doc
   server verification or a signature-verified webhook; amount mismatches are
   rejected; duplicate webhook deliveries are ignored (idempotent).
 - **Secrets** (`SUPABASE_SERVICE_ROLE_KEY`, `PAYSTACK_SECRET_KEY`,
-  `MAILGUN_API_KEY`) exist only in server env vars, never shipped to the browser.
+  `BREVO_API_KEY`) exist only in server env vars, never shipped to the browser.
 
 ### Where integration credentials are required
 
 Everything runs without credentials up to a point: browsing the seeded catalogue
 requires Supabase; orders require Supabase; card payments require Paystack;
-emails require Mailgun. The app shows a friendly setup notice instead of crashing
+emails require Brevo. The app shows a friendly setup notice instead of crashing
 when Supabase isn't configured yet.

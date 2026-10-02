@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/catalog";
+import { nairaToKobo } from "@/lib/money";
 
 export async function GET(request: NextRequest) {
   const state = new URL(request.url).searchParams.get("state") ?? "";
@@ -18,5 +19,9 @@ export async function GET(request: NextRequest) {
   const fallback = (zones ?? []).find((z) => z.zone_name === "Default");
 
   const zone = matching ?? fallback;
-  return NextResponse.json({ fee: zone?.fee ?? null });
+  // delivery_settings.fee is stored in naira, but this endpoint is consumed by
+  // the checkout summary alongside kobo cart totals and formatted with
+  // formatNGN(), which expects kobo. Return kobo so the displayed total
+  // matches what pricing.ts actually charges.
+  return NextResponse.json({ fee: zone?.fee != null ? nairaToKobo(zone.fee) : null });
 }

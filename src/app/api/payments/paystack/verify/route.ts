@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTransaction } from "@/lib/paystack";
-import { sendEmail } from "@/lib/mailgun";
+import { sendEmail } from "@/lib/email";
 import { paymentConfirmedEmail, adminPaymentSuccessEmail } from "@/lib/email-templates";
 import { recordPaymentEvent, PAYMENT_EVENTS } from "@/lib/payment-events";
 
@@ -107,7 +107,12 @@ export async function GET(request: NextRequest) {
         customerName: order.customer_name,
         amountKobo: result.amountKobo,
       });
-      void sendEmail({ to: process.env.ADMIN_EMAIL, subject: adminMail.subject, html: adminMail.html });
+      void sendEmail({
+      to: process.env.ADMIN_EMAIL,
+      subject: adminMail.subject,
+      html: adminMail.html,
+      replyTo: order.customer_email,
+    });
     }
 
     return NextResponse.json({ ok: true, status: "success", orderNumber: order.order_number });

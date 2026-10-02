@@ -35,18 +35,6 @@ as $$
 $$;
 
 -- ---------- profiles ----------
--- Add columns from later versions of this file to databases created earlier
-alter table public.profiles add column if not exists avatar_url text;
-
--- Widen payment status checks to include 'processing' and 'abandoned'
--- (drop-if-exists + named constraints keeps this re-runnable)
-alter table public.orders drop constraint if exists orders_payment_status_check;
-alter table public.orders add constraint orders_payment_status_check
-  check (payment_status in ('pending','processing','awaiting_payment','paid','failed','abandoned','refunded'));
-alter table public.payments drop constraint if exists payments_status_check;
-alter table public.payments add constraint payments_status_check
-  check (status in ('pending','processing','awaiting_payment','paid','failed','abandoned','refunded'));
-
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
@@ -57,6 +45,11 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Columns added in later versions of this file. No-op on a fresh database
+-- (they are already declared above); upgrades databases created earlier.
+-- Must stay below the create table, or this aborts on an empty project.
+alter table public.profiles add column if not exists avatar_url text;
 
 -- auto-create profile on signup
 create or replace function public.handle_new_user()
@@ -246,6 +239,18 @@ create table if not exists public.payments (
 
 create index if not exists idx_payments_order on public.payments(order_id);
 create index if not exists idx_payments_reference on public.payments(reference);
+
+-- Widen payment status checks to include 'processing' and 'abandoned'.
+-- Redundant on a fresh database (the create tables above already declare the
+-- full list); upgrades databases created before those statuses existed.
+-- Must stay below both create tables -- alter table on a missing relation is a
+-- hard error, which is what broke setup on a clean Supabase project.
+alter table public.orders drop constraint if exists orders_payment_status_check;
+alter table public.orders add constraint orders_payment_status_check
+  check (payment_status in ('pending','processing','awaiting_payment','paid','failed','abandoned','refunded'));
+alter table public.payments drop constraint if exists payments_status_check;
+alter table public.payments add constraint payments_status_check
+  check (status in ('pending','processing','awaiting_payment','paid','failed','abandoned','refunded'));
 
 -- ---------- delivery settings ----------
 create table if not exists public.delivery_settings (

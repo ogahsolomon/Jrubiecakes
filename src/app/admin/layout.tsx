@@ -6,15 +6,16 @@ import { isSupabaseConfigured } from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
 
-const NAV = [
-  { href: "/admin", label: "Overview", icon: "📊" },
-  { href: "/admin/orders", label: "Orders", icon: "📦" },
-  { href: "/admin/products", label: "Products", icon: "🎂" },
-  { href: "/admin/categories", label: "Categories", icon: "🗂️" },
-  { href: "/admin/customers", label: "Customers", icon: "👥" },
-  { href: "/admin/payments", label: "Payments", icon: "💳" },
-  { href: "/admin/settings", label: "Settings", icon: "⚙️" },
-];
+  const NAV = [
+    { href: "/admin", label: "Overview", icon: "📊" },
+    { href: "/admin/orders", label: "Orders", icon: "🧾" },
+    { href: "/admin/products", label: "Products", icon: "🧁" },
+    { href: "/admin/categories", label: "Categories", icon: "📂" },
+    { href: "/admin/customers", label: "Customers", icon: "👥" },
+    { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
+    { href: "/admin/payments", label: "Payments", icon: "💳" },
+    { href: "/admin/settings", label: "Settings", icon: "⚙️" },
+  ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured) {

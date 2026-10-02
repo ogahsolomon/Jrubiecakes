@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { contactSchema } from "@/lib/validation";
-import { sendEmail, escapeHtml } from "@/lib/mailgun";
+import { sendEmail, escapeHtml } from "@/lib/email";
 import { layout } from "@/lib/email-templates";
 import { SITE } from "@/lib/constants";
 
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     subject: `New message from ${name} — ${SITE.name}`,
     html,
     text: message,
+    replyTo: email,
   });
 
   if (!result.ok) {

@@ -6,7 +6,7 @@ import { checkoutSchema, cartItemSchema } from "@/lib/validation";
 import { priceCartServerSide } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/utils";
 import { nairaToKobo, formatNGN } from "@/lib/money";
-import { sendEmail } from "@/lib/mailgun";
+import { sendEmail } from "@/lib/email";
 import {
   orderConfirmationEmail,
   adminNewOrderEmail,
@@ -278,7 +278,12 @@ export async function POST(request: NextRequest) {
             total: priced.total,
             paymentMethod: checkout.paymentMethod,
           });
-    void sendEmail({ to: process.env.ADMIN_EMAIL, subject: adminMail.subject, html: adminMail.html });
+    void sendEmail({
+      to: process.env.ADMIN_EMAIL,
+      subject: adminMail.subject,
+      html: adminMail.html,
+      replyTo: checkout.customer.email,
+    });
   }
 
   // Bank transfer: dedicated customer email with transfer instructions

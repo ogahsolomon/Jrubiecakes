@@ -54,7 +54,7 @@ PAYSTACK_SECRET_KEY=sk_test_xxxxxxxx
 PAYSTACK_WEBHOOK_SECRET=whsec_xxxxxxxx
 
 # Base URL used to build the payment callback (defaults to the site URL)
-PAYSTACK_CALLBACK_URL_BASE=http://localhost:3000
+PAYSTACK_CALLBACK_URL_BASE=http://localhost:3001
 ```
 
 There are also the usual Supabase vars (`NEXT_PUBLIC_SUPABASE_URL`,

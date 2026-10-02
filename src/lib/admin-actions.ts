@@ -75,7 +75,7 @@ export async function updateOrderStatus(formData: FormData) {
       .eq("id", orderId)
       .single();
     if (order) {
-      const { sendEmail } = await import("@/lib/mailgun");
+      const { sendEmail } = await import("@/lib/email");
       const {
         orderStatusUpdateEmail,
         ORDER_STATUS_EMAIL_NOTES,

@@ -1,6 +1,6 @@
 import { formatNGN } from "./money";
 import { SITE } from "./constants";
-import { escapeHtml } from "./mailgun";
+import { escapeHtml } from "./email";
 import type { PricedLine } from "./pricing";
 
 const BRAND_BG = "#FDF8EF";
