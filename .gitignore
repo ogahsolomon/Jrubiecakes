@@ -1,0 +1,45 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+npm-install.log
+
+# env files
+.env
+.env.local
+.env.*.local
+.env.backup
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# extraction helper artifacts
+/contact_sheet.html
+/verify_sheet.html
+/zoom2.html
+/zoom3.html
+/price_zoom.html
+/doc_with_images.txt
+/master_prompt.txt
+/ocr.ps1
+/extract_docx.py
+/extract_images.py
+/build_sheet.py
+/build_verify.py
+/build_zoom2.py
+
+# local archive of source material (master prompt doc extraction, scratch scripts)
+/_archive
