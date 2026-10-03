@@ -17,8 +17,6 @@ npm-debug.log*
 npm-install.log
 
 # env files
-.env
-.env.local
 .env.*.local
 .env.backup
 
@@ -43,3 +41,4 @@ next-env.d.ts
 
 # local archive of source material (master prompt doc extraction, scratch scripts)
 /_archive
+config.bat
