@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm ci",
-  "regions": ["cdg1", "lhr1", "iad1"],
+  "regions": ["lhr1"],
   "headers": [
     {
       "source": "/(.*)",
