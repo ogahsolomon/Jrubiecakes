@@ -1,6 +1,7 @@
-﻿import { NextResponse, type NextRequest } from 'next/server';
+﻿import { type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { getRequestUser } from '@/lib/supabase/request-user';
+import { jsonWithCors, preflight } from '@/lib/cors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { fetchProductPrice, buildLineKey } from '@/lib/cart-server';
 import type { CartItem } from '@/types';
@@ -20,25 +21,28 @@ const addSchema = z.object({
   customCake: z.any().optional(),
 });
 
+export function OPTIONS(request: NextRequest) {
+  return preflight(request);
+}
+
 export async function POST(request: NextRequest) {
+  const authUser = await getRequestUser(request);
+  if (!authUser) return jsonWithCors(request, { error: 'Not signed in' }, 401);
   let parsed;
   try {
     parsed = addSchema.safeParse(await request.json());
   } catch {
-    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Invalid body' }, 400);
   }
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Invalid payload' }, 400);
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const { productId, quantity, optionRefs, customCake } = parsed.data;
   const priceInfo = await fetchProductPrice(productId, optionRefs);
   if (!priceInfo.ok) {
-    return NextResponse.json({ error: priceInfo.error ?? 'Product unavailable' }, { status: 400 });
+    return jsonWithCors(request, { error: priceInfo.error ?? 'Product unavailable' }, 400);
   }
 
   const optionsForKey: CartItem['options'] = (optionRefs ?? []).map((r) => ({
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await admin
     .from('cart_state')
     .select('items')
-    .eq('user_id', user.id)
+    .eq('user_id', authUser.id)
     .single();
 
   let items: CartItem[] = ((existing?.items as any) ?? []) as CartItem[];
@@ -75,10 +79,11 @@ export async function POST(request: NextRequest) {
   }
 
   const { error } = await admin.from('cart_state').upsert(
-    { user_id: user.id, items: items as any },
+    { user_id: authUser.id, items: items as any },
     { onConflict: 'user_id' }
   );
-  if (error) return NextResponse.json({ error: 'Could not save cart' }, { status: 500 });
+  if (error) return jsonWithCors(request, { error: 'Could not save cart' }, 500);
 
   return NextResponse.json({ items });
 }
+

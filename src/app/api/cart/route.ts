@@ -1,6 +1,7 @@
-﻿import { NextResponse, type NextRequest } from 'next/server';
+﻿import { type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { getRequestUser } from '@/lib/supabase/request-user';
+import { jsonWithCors, preflight } from '@/lib/cors';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
@@ -34,10 +35,13 @@ const cartItemSchema = z.object({
 
 const bodySchema = z.object({ items: z.array(cartItemSchema).max(50) });
 
-export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+export function OPTIONS(request: NextRequest) {
+  return preflight(request);
+}
+
+export async function GET(request: NextRequest) {
+  const user = await getRequestUser(request);
+  if (!user) return jsonWithCors(request, { error: 'Not signed in' }, 401);
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -47,26 +51,25 @@ export async function GET() {
     .single();
 
   if (error && error.code !== 'PGRST116') {
-    return NextResponse.json({ error: 'Could not load cart' }, { status: 500 });
+    return jsonWithCors(request, { error: 'Could not load cart' }, 500);
   }
 
-  return NextResponse.json({ items: (data?.items as any) ?? [] });
+  return jsonWithCors(request, { items: (data?.items as any) ?? [] });
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getRequestUser(request);
+  if (!user) return jsonWithCors(request, { error: 'Not signed in' }, 401);
+
   let parsed;
   try {
     parsed = bodySchema.safeParse(await request.json());
   } catch {
-    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Invalid body' }, 400);
   }
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid cart payload' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Invalid cart payload' }, 400);
   }
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const admin = createAdminClient();
   const { error } = await admin.from('cart_state').upsert(
@@ -76,8 +79,8 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error('[cart] upsert failed:', error.message);
-    return NextResponse.json({ error: 'Could not save cart' }, { status: 500 });
+    return jsonWithCors(request, { error: 'Could not save cart' }, 500);
   }
 
-  return NextResponse.json({ ok: true });
+  return jsonWithCors(request, { ok: true });
 }
