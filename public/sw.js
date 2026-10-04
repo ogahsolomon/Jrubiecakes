@@ -35,6 +35,21 @@ self.addEventListener("fetch", (event) => {
   // Never cache API responses or auth: they must always be fresh.
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
 
+  // Never cache Next.js router internals. These carry per-session React state
+  // and navigation intent; serving a stale copy breaks client-side routing.
+  if (url.searchParams.has("_rsc")) return;
+  if (request.headers.get("RSC")) return;
+  if (request.headers.get("Next-Router-Prefetch")) return;
+  if (request.headers.get("Next-Router-State-Tree")) return;
+
+  // Only cache real assets and page navigations, never opaque responses.
+  const isAsset = /\.(?:js|css|png|jpe?g|svg|webp|avif|ico|woff2?|ttf|map)$/i.test(
+    url.pathname
+  );
+  const isNavigation = request.mode === "navigate";
+
+  if (!isAsset && !isNavigation) return;
+
   // Network-first: fresh content when online, cached copy when offline.
   event.respondWith(
     fetch(request)
@@ -46,7 +61,9 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() =>
-        caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL))
+        caches
+          .match(request)
+          .then((cached) => cached || (isNavigation ? caches.match(OFFLINE_URL) : undefined))
       )
   );
 });
