@@ -48,6 +48,17 @@ export type CartItem = {
   options: CartItemOption[];
   /** Present when the product was customized; used for server-side repricing. */
   optionRefs?: CartItemOptionRef[];
+  /** Design brief for a bespoke cake order, persisted with the cart line. */
+  customCake?: CartCustomCake;
+};
+
+export type CartCustomCake = {
+  flavor?: string;
+  size?: string;
+  servings?: string;
+  colors?: string;
+  designNotes?: string;
+  referenceImageUrl?: string | null;
 };
 
 export type FulfillmentType = "delivery" | "pickup";

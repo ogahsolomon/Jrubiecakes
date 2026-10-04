@@ -1,4 +1,4 @@
-﻿import { type NextRequest } from 'next/server';
+﻿import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getRequestUser } from '@/lib/supabase/request-user';
 import { jsonWithCors, preflight } from '@/lib/cors';
