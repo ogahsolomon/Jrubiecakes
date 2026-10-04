@@ -1,7 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+﻿import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request-user";
 import { checkoutSchema, cartItemSchema } from "@/lib/validation";
 import { priceCartServerSide } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/utils";
@@ -43,9 +43,11 @@ export async function POST(request: NextRequest) {
 
   const { checkout, cart } = parsed.data;
 
-  // ---- Identify user (optional — guests can order) ----
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+// ---- Identify user (optional - guests can order) ----
+  // Accepts a Supabase session cookie (web) or an Authorization: Bearer
+  // access token (native app) so mobile orders attach to the same account.
+  const authUser = await getRequestUser(request);
+  const user = authUser ? { id: authUser.id } : null;
 
   // ---- Check payment method is enabled ----
   const paymentOptions = await getSiteSetting("payment_options", {
@@ -326,3 +328,4 @@ export function GET() {
 // Ensure formatNGN import is used (referenced in error paths in future edits)
 void formatNGN;
 void nairaToKobo;
+
