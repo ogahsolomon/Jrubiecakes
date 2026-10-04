@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/layout/header";
@@ -23,7 +23,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: `${SITE.name} â€” ${SITE.tagline}`,
+    default: `${SITE.name} — ${SITE.tagline}`,
     template: `%s | ${SITE.name}`,
   },
   description: SITE.description,
@@ -31,16 +31,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_NG",
     siteName: SITE.name,
-    title: `${SITE.name} â€” ${SITE.tagline}`,
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} â€” ${SITE.tagline}`,
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
   robots: { index: true, follow: true },
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
