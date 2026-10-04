@@ -1,9 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+﻿import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 const optionRefSchema = z.object({
   optionId: z.string().uuid(),
@@ -29,55 +29,54 @@ const cartItemSchema = z.object({
     )
     .max(20),
   optionRefs: z.array(optionRefSchema).max(20).optional(),
+  customCake: z.any().optional(),
 });
 
 const bodySchema = z.object({ items: z.array(cartItemSchema).max(50) });
 
-/** GET — return the signed-in customer's saved cart. */
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("cart_state")
-    .select("items, updated_at")
-    .eq("user_id", user.id)
+    .from('cart_state')
+    .select('items, updated_at')
+    .eq('user_id', user.id)
     .single();
 
-  if (error && error.code !== "PGRST116") {
-    return NextResponse.json({ error: "Could not load cart" }, { status: 500 });
+  if (error && error.code !== 'PGRST116') {
+    return NextResponse.json({ error: 'Could not load cart' }, { status: 500 });
   }
 
-  return NextResponse.json({ items: data?.items ?? [] });
+  return NextResponse.json({ items: (data?.items as any) ?? [] });
 }
 
-/** POST — replace the signed-in customer's saved cart. */
 export async function POST(request: NextRequest) {
   let parsed;
   try {
     parsed = bodySchema.safeParse(await request.json());
   } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid cart payload" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid cart payload' }, { status: 400 });
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from("cart_state").upsert(
-    { user_id: user.id, items: parsed.data.items },
-    { onConflict: "user_id" }
+  const { error } = await admin.from('cart_state').upsert(
+    { user_id: user.id, items: parsed.data.items as any },
+    { onConflict: 'user_id' }
   );
 
   if (error) {
-    console.error("[cart] upsert failed:", error.message);
-    return NextResponse.json({ error: "Could not save cart" }, { status: 500 });
+    console.error('[cart] upsert failed:', error.message);
+    return NextResponse.json({ error: 'Could not save cart' }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
