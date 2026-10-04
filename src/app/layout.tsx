@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartSync } from "@/components/cart/cart-sync";
+import { PwaRegister } from "@/components/pwa-register";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -23,7 +24,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: `${SITE.name} â€” ${SITE.tagline}`,
+    default: `${SITE.name} — ${SITE.tagline}`,
     template: `%s | ${SITE.name}`,
   },
   description: SITE.description,
@@ -31,16 +32,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_NG",
     siteName: SITE.name,
-    title: `${SITE.name} â€” ${SITE.tagline}`,
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} â€” ${SITE.tagline}`,
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
-  robots: { index: true, follow: true },
-  manifest: '/manifest.json',
+robots: { index: true, follow: true },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Jrubiecakes",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <CartDrawer />
           <CartSync />
+          <PwaRegister />
         </Providers>
       </body>
     </html>
