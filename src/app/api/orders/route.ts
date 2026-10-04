@@ -21,6 +21,10 @@ import { recordPaymentEvent, PAYMENT_EVENTS } from "@/lib/payment-events";
 const bodySchema = z.object({
   checkout: checkoutSchema,
   cart: z.array(cartItemSchema).min(1, "Cart is empty").max(50),
+  // Which client is placing the order. Decides where Paystack sends the
+  // customer back to. The callback URL is always built server-side from this
+  // flag — the client can never supply an arbitrary redirect target.
+  platform: z.enum(["web", "app"]).default("web"),
 });
 
 export async function POST(request: NextRequest) {
@@ -41,7 +45,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { checkout, cart } = parsed.data;
+  const { checkout, cart, platform } = parsed.data;
+
+// Deep link Paystack uses to hand the customer back to the native app.
+// Must stay in step with `scheme` in the mobile app's app.json.
+const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
 
 // ---- Identify user (optional - guests can order) ----
   // Accepts a Supabase session cookie (web) or an Authorization: Bearer
@@ -178,7 +186,8 @@ export async function POST(request: NextRequest) {
       email: checkout.customer.email,
       amountKobo: priced.total,
       reference: paymentReference,
-      callbackUrl: `${SITE.url}/checkout/callback`,
+      callbackUrl:
+        platform === "app" ? APP_PAYMENT_CALLBACK_URL : `${SITE.url}/checkout/callback`,
       metadata: { orderNumber, orderId: order.id, customerName: checkout.customer.fullName },
     });
 
@@ -311,11 +320,14 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({
+return NextResponse.json({
     ok: true,
     orderNumber: order.order_number,
     total: priced.total,
     authorizationUrl,
+    // Returned so the native app can confirm payment later if the browser
+    // redirect never lands (user closed the tab, network dropped, etc).
+    paymentReference,
     issues: priced.issues,
   });
 }
