@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { getCategories, getFeaturedProducts, getApprovedTestimonials, getSiteSetting } from "@/lib/catalog";
 import { ProductCard } from "@/components/shop/product-card";
+import { ResilientImage } from "@/components/ui/resilient-image";
 import { SITE } from "@/lib/constants";
 
 type AboutStory = { heading: string; story: string };
@@ -30,6 +30,8 @@ const CATEGORY_IMAGES: Record<string, string> = {
   pastries: "/products/donuts.png",
   "small-chops": "/products/small-chops.png",
   cookies: "/products/cookies.png",
+  // Fallback for any featured category without its own photo.
+  fallback: "/products/pasteries.png",
 };
 
 const PASTRIES = [
@@ -80,7 +82,7 @@ export default async function HomePage() {
     if (found) return found;
     // "Pastries" is a storefront grouping, not a DB category — synthesize it
     if (slug === "pastries") {
-      return { id: "pastries", slug: "donuts", name: "Pastries", description: null, image_url: null, sort_order: 0, is_active: true, created_at: "", updated_at: "" };
+      return { id: "pastries", slug: "pastries", name: "Pastries", description: null, image_url: null, sort_order: 0, is_active: true, created_at: "", updated_at: "" };
     }
     return null;
   }).filter(Boolean);
@@ -122,21 +124,21 @@ export default async function HomePage() {
           </div>
 
           <div className="relative mx-auto grid w-full max-w-md grid-cols-2 gap-3 lg:max-w-none">
-            <div className="relative col-span-2 aspect-[16/10] overflow-hidden rounded-3xl shadow-card">
-              <Image
+            <div className="relative col-span-2 aspect-[4/3] overflow-hidden rounded-3xl shadow-card sm:aspect-[16/10]">
+              <ResilientImage
                 src="/products/birthday-cake.png"
                 alt="Jrubiecakes custom birthday cake with pink buttercream"
                 fill
                 priority
-                className="object-cover"
+                className="object-cover object-top"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
             </div>
             <div className="relative aspect-square overflow-hidden rounded-3xl shadow-card">
-              <Image src="/products/cupcakes.png" alt="Decorated cupcakes box" fill className="object-cover" sizes="25vw" />
+              <ResilientImage src="/products/cupcakes.png" alt="Decorated cupcakes box" fill className="object-cover object-top" sizes="25vw" fallbackEmoji="🧁" />
             </div>
             <div className="relative aspect-square overflow-hidden rounded-3xl shadow-card">
-              <Image src="/products/small-chops.png" alt="Small chops platter" fill className="object-cover" sizes="25vw" />
+              <ResilientImage src="/products/small-chops.png" alt="Small chops platter" fill className="object-cover" sizes="25vw" fallbackEmoji="🥟" />
             </div>
           </div>
         </div>
@@ -149,10 +151,10 @@ export default async function HomePage() {
             <h2 className="font-display text-2xl font-bold text-cocoa-900 sm:text-3xl">Shop by category</h2>
             <p className="mt-1 text-sm text-cocoa-500">From celebration cakes to party chops</p>
           </div>
-          <Link href="/shop" className="hidden text-sm font-semibold text-blush-600 hover:text-blush-700 sm:block">
-            View all →
-          </Link>
-        </div>
+<Link href="/shop" className="shrink-0 text-sm font-semibold text-blush-600 hover:text-blush-700">
+              View all →
+            </Link>
+          </div>
 
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {featuredCategories.map((cat) => (
@@ -161,15 +163,16 @@ export default async function HomePage() {
               href={`/shop?category=${cat!.slug}`}
               className="group relative aspect-[4/5] overflow-hidden rounded-2xl shadow-card"
             >
-              <Image
-                src={CATEGORY_IMAGES[cat!.slug] ?? "/products/cookies.png"}
+              <ResilientImage
+                src={CATEGORY_IMAGES[cat!.slug] ?? CATEGORY_IMAGES.fallback}
                 alt={cat!.name}
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 640px) 50vw, 16vw"
+                className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                fallbackEmoji="🧁"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-cocoa-900/70 via-cocoa-900/10 to-transparent" />
-              <span className="absolute bottom-3 left-3 right-3 text-sm font-semibold text-white">
+              <span className="absolute bottom-2 left-2 right-2 text-xs font-semibold leading-tight text-white drop-shadow-sm sm:bottom-3 sm:left-3 sm:right-3 sm:text-sm">
                 {cat!.name}
               </span>
             </Link>
@@ -236,12 +239,13 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="relative min-h-64 lg:min-h-96 lg:h-full">
-            <Image
+            <ResilientImage
               src="/products/childrens-cake.png"
               alt="Children's themed birthday cake"
               fill
-              className="object-cover"
+              className="object-cover object-top"
               sizes="(max-width: 1024px) 100vw, 50vw"
+              fallbackEmoji="🎈"
             />
           </div>
         </div>
@@ -253,20 +257,21 @@ export default async function HomePage() {
           <h2 className="font-display text-2xl font-bold text-cocoa-900 sm:text-3xl">Pastries &amp; party treats</h2>
           <p className="mt-1 text-sm text-cocoa-500">Perfect for parties, offices and gifting</p>
         </div>
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
           {PASTRIES.map((p) => (
             <Link
               key={p.slug}
               href={`/shop?category=${p.slug}`}
               className="group overflow-hidden rounded-2xl bg-white shadow-card transition-shadow hover:shadow-card-hover"
             >
-              <div className="relative aspect-square overflow-hidden">
-                <Image
+              <div className="relative aspect-square overflow-hidden bg-cocoa-100">
+                <ResilientImage
                   src={p.image}
                   alt={p.name}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  sizes="(max-width: 640px) 50vw, 14vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 14vw"
+                  fallbackEmoji="🍩"
                 />
               </div>
               <div className="p-3 text-center">
@@ -281,7 +286,7 @@ export default async function HomePage() {
       <section className="container-page py-14">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-card">
-            <Image
+            <ResilientImage
               src="/products/cake-loaf.png"
               alt="Freshly baked treats from the Jrubiecakes kitchen"
               fill

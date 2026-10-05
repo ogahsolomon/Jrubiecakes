@@ -1,8 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
+
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ProductForm } from "@/components/admin/product-form";
+import { ResilientImage } from "@/components/ui/resilient-image";
 import {
   addProductImage,
   setPrimaryImage,
@@ -76,7 +77,7 @@ export default async function EditProductPage({
                 {images.map((img, i) => (
                   <li key={img.id} className="overflow-hidden rounded-xl border border-cocoa-100 bg-cream-50">
                     <div className="relative aspect-[4/3] bg-cocoa-100">
-                      <Image src={img.url} alt={img.alt_text ?? ""} fill className="object-cover" sizes="200px" />
+                      <ResilientImage src={img.url} alt={img.alt_text ?? ""} fill className="object-cover object-top" sizes="200px" />
                       {i === 0 && (
                         <span className="absolute left-2 top-2 badge bg-cocoa-800 text-cream-50">Primary</span>
                       )}

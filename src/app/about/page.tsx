@@ -1,7 +1,8 @@
-import Image from "next/image";
+
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SITE } from "@/lib/constants";
+import { ResilientImage } from "@/components/ui/resilient-image";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -43,11 +44,11 @@ export default function AboutPage() {
         </div>
 
         <div className="relative aspect-[4/5] overflow-hidden rounded-3xl shadow-card">
-          <Image
+<ResilientImage
             src="/products/birthday-cake.png"
             alt="A Jrubiecakes birthday cake"
             fill
-            className="object-cover"
+            className="object-cover object-top"
             sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>

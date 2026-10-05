@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ResilientImage } from "@/components/ui/resilient-image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -112,18 +113,14 @@ export function ProductDetail({ product }: { product: Product }) {
       {/* ---------- Gallery ---------- */}
       <div>
         <div className="relative aspect-square overflow-hidden rounded-3xl bg-cocoa-100 shadow-card">
-          {images[activeImage] ? (
-            <Image
-              src={images[activeImage].url}
-              alt={images[activeImage].alt_text ?? product.name}
-              fill
-              priority
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-6xl" aria-hidden="true">🎂</div>
-          )}
+          <ResilientImage
+            src={images[activeImage]?.url}
+            alt={images[activeImage]?.alt_text ?? product.name}
+            fill
+            priority
+            className="object-cover object-top"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+          />
         </div>
         {images.length > 1 && (
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Product images">
@@ -140,7 +137,7 @@ export function ProductDetail({ product }: { product: Product }) {
                   i === activeImage ? "border-cocoa-700" : "border-transparent opacity-70 hover:opacity-100"
                 )}
               >
-                <Image src={img.url} alt="" fill className="object-cover" sizes="64px" />
+                <ResilientImage src={img.url} alt="" fill className="object-cover object-top" sizes="64px" />
               </button>
             ))}
           </div>

@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="mt-3 max-w-sm text-sm text-cocoa-500">
         The page you&apos;re looking for has been eaten. Let&apos;s get you back to something delicious.
       </p>
-      <div className="mt-8 flex gap-3">
+      <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
         <Link href="/" className="btn-primary">Go Home</Link>
         <Link href="/shop" className="btn-outline">Browse the Shop</Link>
       </div>

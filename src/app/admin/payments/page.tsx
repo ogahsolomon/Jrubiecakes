@@ -31,7 +31,7 @@ export default async function AdminPaymentsPage() {
         <ExpireStalePaymentsButton />
       </div>
 
-      <div className="card mt-6 overflow-x-auto">
+      <div className="card table-scroll mt-6">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
             <tr>

@@ -17,7 +17,7 @@ export default async function AdminReviewsPage() {
       <h1 className="font-display text-2xl font-bold text-cocoa-900">Reviews</h1>
       <p className="mt-1 text-sm text-cocoa-500">Moderate customer reviews and testimonials</p>
 
-      <div className="card mt-5 overflow-x-auto">
+      <div className="card table-scroll mt-5">
         <table className="w-full min-w-[880px] text-left text-sm">
           <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
             <tr>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+
+import { ResilientImage } from "@/components/ui/resilient-image";
 import { useCart, useToast } from "@/components/providers";
 import { formatNGN } from "@/lib/money";
 
@@ -47,11 +48,7 @@ export default function CartPage() {
             {items.map((item) => (
               <li key={item.key} className="flex gap-4 rounded-2xl bg-white p-4 shadow-card">
                 <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-cocoa-100">
-                  {item.imageUrl ? (
-                    <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="96px" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-3xl" aria-hidden="true">🍰</div>
-                  )}
+                  <ResilientImage src={item.imageUrl} alt={item.name} fill className="object-cover object-top" sizes="96px" fallbackEmoji="🍰" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">

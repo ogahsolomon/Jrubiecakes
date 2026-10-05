@@ -30,41 +30,44 @@ if (!url || !serviceKey) {
 const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
 const BUCKET = "product-images";
 
-// local file -> product slug mapping (matches supabase/schema.sql seed)
+// Local file -> product slug mapping.
+// Keys must be the exact filenames on disk. Products with no photo yet are
+// deliberately absent; add an entry here once the photo is added to
+// public/products.
 const SLUG_MAP = {
   "birthday-cake.png": "custom-birthday-cake",
   "childrens-cake.png": "childrens-themed-cake",
   "number-cake.png": "number-cake",
   "cupcakes.png": "decorated-cupcakes-box-6",
-  "gift-cake.png": "gift-cake",
-  "wedding-cake.png": "classic-white-celebration-cake",
   "cake-loaf.png": "cake-loaf",
   "uniced-cake.png": "uniced-cake",
   "donuts.png": "donuts-box-6",
   "meat-pies.png": "meat-pie",
-  "fish-pies.png": "fish-pie",
   "chin-chin.png": "chin-chin-jar",
-  "cookies.png": "cookies-pack-8",
   "small-chops.png": "small-chops-platter",
-  "sausage-rolls.png": "sausage-rolls-pack-6",
 };
 
 const dir = join(process.cwd(), "public", "products");
-const files = readdirSync(dir).filter((f) => f.endsWith(".png") || f.endsWith(".jpg") || f.endsWith(".webp"));
+const files = readdirSync(dir).filter((f) => /\.(png|jpe?g|webp)$/i.test(f));
 
 for (const file of files) {
   const slug = SLUG_MAP[file];
   if (!slug) {
-    console.log(`- skipping ${file} (no product mapping)`);
+    console.log(`- skipping ${file} (no product mapping — not every file is a product photo)`);
     continue;
   }
+
+  // Content type has to match the real extension, otherwise the browser is
+  // handed a PNG header under a JPEG label and refuses to render it.
+  const ext = file.slice(file.lastIndexOf(".") + 1).toLowerCase();
+  const contentType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
 
   const path = `seed/${file}`;
   const body = readFileSync(join(dir, file));
 
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
-    .upload(path, body, { contentType: "image/png", upsert: true });
+    .upload(path, body, { contentType, upsert: true });
 
   if (upErr && !upErr.message.includes("already")) {
     console.error(`! upload failed for ${file}:`, upErr.message);

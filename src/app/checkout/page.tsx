@@ -2,9 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/providers";
+import { ResilientImage } from "@/components/ui/resilient-image";
 import { formatNGN } from "@/lib/money";
 import { NIGERIAN_STATES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -16,13 +17,13 @@ const STEPS = ["Customer", "Delivery", "Details", "Payment"] as const;
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <ol className="flex items-center gap-2" aria-label="Checkout progress">
+    <ol className="flex flex-wrap items-center gap-x-2 gap-y-3 sm:flex-nowrap" aria-label="Checkout progress">
       {STEPS.map((label, i) => (
         <li key={label} className="flex items-center gap-2">
           <span
             aria-current={i === current ? "step" : undefined}
             className={cn(
-              "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
               i < current
                 ? "bg-cocoa-700 text-cream-50"
                 : i === current
@@ -32,10 +33,19 @@ function StepIndicator({ current }: { current: number }) {
           >
             {i < current ? "✓" : i + 1}
           </span>
-          <span className={cn("text-xs font-medium", i === current ? "text-cocoa-900" : "text-cocoa-400")}>
-            {label}
+          <span
+            className={cn(
+              "text-xs font-medium",
+              i === current ? "text-cocoa-900" : "text-cocoa-400"
+            )}
+          >
+            {/* Label collapses to initials on the narrowest screens so the row never overflows */}
+            <span className="sm:hidden">{label.slice(0, 3)}</span>
+            <span className="hidden sm:inline">{label}</span>
           </span>
-          {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 bg-cocoa-200" aria-hidden="true" />}
+          {i < STEPS.length - 1 && (
+            <span className="mx-1 hidden h-px w-4 bg-cocoa-200 sm:block" aria-hidden="true" />
+          )}
         </li>
       ))}
     </ol>
@@ -247,7 +257,7 @@ function CheckoutInner() {
             <h2 className="font-display text-xl font-bold text-cocoa-900">Delivery information</h2>
             <fieldset>
               <legend className="label">How would you like to receive your order?</legend>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {(["delivery", "pickup"] as const).map((t) => (
                   <button key={t} type="button" onClick={() => setFulfillmentType(t)} aria-pressed={fulfillmentType === t}
                     className={cn("rounded-2xl border-2 p-4 text-left transition-colors",
@@ -416,11 +426,7 @@ function CheckoutInner() {
           {items.map((item) => (
             <li key={item.key} className="flex gap-3">
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-cocoa-100">
-                {item.imageUrl ? (
-                  <Image src={item.imageUrl} alt="" fill className="object-cover" sizes="56px" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xl" aria-hidden="true">🍰</div>
-                )}
+                <ResilientImage src={item.imageUrl} alt="" fill className="object-cover object-top" sizes="56px" fallbackEmoji="🍰" />
               </div>
               <div className="min-w-0 flex-1 text-sm">
                 <p className="truncate font-medium text-cocoa-900">{item.name}</p>

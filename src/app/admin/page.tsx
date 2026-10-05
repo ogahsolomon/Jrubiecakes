@@ -121,13 +121,13 @@ export default async function AdminDashboardPage() {
               View all →
             </Link>
           </div>
-          <div className="card mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="card table-scroll mt-3">
+            <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
                 <tr>
                   <th className="px-4 py-3 font-medium">Order</th>
                   <th className="px-4 py-3 font-medium">Customer</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">Status</th>
                   <th className="px-4 py-3 text-right font-medium">Total</th>
                 </tr>
               </thead>
@@ -147,8 +147,10 @@ export default async function AdminDashboardPage() {
                         </Link>
                         <div className="text-xs text-cocoa-400">{formatDateTime(order.created_at)}</div>
                       </td>
-                      <td className="px-4 py-3 text-cocoa-700">{order.customer_name}</td>
                       <td className="px-4 py-3">
+                        <div className="truncate text-cocoa-700">{order.customer_name}</div>
+                      </td>
+                      <td className="hidden px-4 py-3 sm:table-cell">
                         <span className="badge bg-cocoa-100 text-cocoa-700">
                           {ORDER_STATUS_LABELS[order.order_status as OrderStatus] ?? order.order_status}
                         </span>

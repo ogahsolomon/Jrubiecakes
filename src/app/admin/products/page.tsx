@@ -1,7 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { archiveProduct, deleteProduct } from "@/lib/admin-actions";
+import { ResilientImage } from "@/components/ui/resilient-image";
 import { formatPriceNaira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function AdminProductsPage({
           <h1 className="font-display text-2xl font-bold text-cocoa-900">Products</h1>
           <p className="mt-1 text-sm text-cocoa-500">Add, edit and manage your catalogue</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex w-full flex-wrap gap-3 sm:w-auto">
           <Link
             href={showArchived ? "/admin/products" : "/admin/products?archived=1"}
             className="btn-outline !py-2.5"
@@ -48,8 +49,8 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
-      <div className="card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
+      <div className="card table-scroll mt-6">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
@@ -75,7 +76,7 @@ export default async function AdminProductsPage({
                     <div className="flex items-center gap-3">
                       <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-cocoa-100">
                         {image?.url ? (
-                          <Image src={image.url} alt="" fill className="object-cover" sizes="44px" />
+                          <ResilientImage src={image.url} alt="" fill className="object-cover object-top" sizes="44px" />
                         ) : (
                           <div className="flex h-full items-center justify-center text-lg" aria-hidden="true">🎂</div>
                         )}

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/layout/header";
@@ -47,6 +47,17 @@ robots: { index: true, follow: true },
     title: "Jrubiecakes",
     statusBarStyle: "default",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets the layout extend under notches on phones installed as a PWA.
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFF7F0" },
+    { media: "(prefers-color-scheme: dark)", color: "#3B2A20" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

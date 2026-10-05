@@ -53,7 +53,7 @@ export default async function AdminOrdersPage({
         ))}
       </nav>
 
-      <div className="card mt-5 overflow-x-auto">
+      <div className="card table-scroll mt-5">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
             <tr>

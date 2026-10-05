@@ -46,7 +46,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 {profile?.full_name ?? user.email}
               </div>
             </div>
-            <nav aria-label="Admin navigation" className="flex gap-1 overflow-x-auto lg:flex-col">
+            <nav
+              aria-label="Admin navigation"
+              className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+            >
               {NAV.map((item) => (
                 <Link
                   key={item.href}

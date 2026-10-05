@@ -31,7 +31,7 @@ export default async function AdminCustomersPage() {
       <h1 className="font-display text-2xl font-bold text-cocoa-900">Customers</h1>
       <p className="mt-1 text-sm text-cocoa-500">{customers.length} registered customer{customers.length === 1 ? "" : "s"}</p>
 
-      <div className="card mt-6 overflow-x-auto">
+      <div className="card table-scroll mt-6">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="border-b border-cocoa-100 text-xs uppercase tracking-wide text-cocoa-400">
             <tr>

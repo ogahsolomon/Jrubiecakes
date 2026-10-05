@@ -5,9 +5,27 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-cream-50 text-cocoa-800 font-body antialiased;
+    /* Prevents iOS zooming when a numeric input receives focus. */
+    text-size-adjust: 100%;
+  }
+  /* Respect users who ask the OS to reduce motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* Visible keyboard focus on every interactive element, not just :focus-visible. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-cocoa-500 ring-offset-2 ring-offset-cream-50;
   }
   ::selection {
     @apply bg-blush-200 text-cocoa-900;
@@ -17,6 +35,12 @@
 @layer components {
   .container-page {
     @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+    /* Keeps content clear of notches and rounded corners when installed as a PWA. */
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .container-page-safe-b {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cocoa-600 disabled:cursor-not-allowed disabled:opacity-50;
@@ -47,5 +71,17 @@
   }
   .skeleton {
     @apply animate-pulse rounded-xl bg-cocoa-100;
+  }
+  /* Images that have no photo yet: soft branded panel instead of a broken icon. */
+  .image-fallback {
+    @apply flex h-full w-full items-center justify-center bg-gradient-to-br from-cream-200 via-cream-100 to-blush-100;
+  }
+  /* Horizontal scroll container for wide admin tables on small screens. */
+  .table-scroll {
+    @apply w-full overflow-x-auto overscroll-x-contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll table {
+    @apply w-full min-w-full;
   }
 }
