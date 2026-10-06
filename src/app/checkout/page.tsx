@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/providers";
 import { ResilientImage } from "@/components/ui/resilient-image";
+import { createClient } from "@/lib/supabase/client";
 import { formatNGN } from "@/lib/money";
 import { NIGERIAN_STATES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ function CheckoutInner() {
   // Step 1: customer
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
 
   // Step 2: delivery
@@ -84,6 +86,32 @@ function CheckoutInner() {
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions>({ paystack: true, bank_transfer: true, cash: true });
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+    const applySessionEmail = (nextEmail: string | null) => {
+      if (!active) return;
+      setAccountEmail(nextEmail);
+      setEmail(nextEmail ?? "");
+    };
+
+    supabase.auth.getUser().then(({ data, error: authError }) => {
+      if (authError) {
+        console.error("Could not load checkout account email:", authError.message);
+        return;
+      }
+      applySessionEmail(data.user?.email ?? null);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySessionEmail(session?.user.email ?? null);
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Prefill + load settings
   useEffect(() => {
@@ -235,9 +263,11 @@ function CheckoutInner() {
             <div>
               <label htmlFor="co-email" className="label">Email</label>
               <input id="co-email" type="email" autoComplete="email" className="input" value={email}
-                onChange={(e) => setEmail(e.target.value)} aria-invalid={!!fieldErrors.email}
+                onChange={(e) => setEmail(e.target.value)} readOnly={!!accountEmail} aria-invalid={!!fieldErrors.email}
                 aria-describedby="co-email-hint" />
-              <p id="co-email-hint" className="mt-1 text-xs text-cocoa-400">Order updates and receipts are sent here</p>
+              <p id="co-email-hint" className="mt-1 text-xs text-cocoa-400">
+                {accountEmail ? "Order updates and receipts are sent to your account email." : "Order updates and receipts are sent here"}
+              </p>
               {fieldErrors.email && <p role="alert" className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
             </div>
             <div>

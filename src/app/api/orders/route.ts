@@ -56,6 +56,22 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
   // access token (native app) so mobile orders attach to the same account.
   const authUser = await getRequestUser(request);
   const user = authUser ? { id: authUser.id } : null;
+  if (
+    authUser &&
+    (!authUser.email ||
+      checkout.customer.email.trim().toLowerCase() !== authUser.email.trim().toLowerCase())
+  ) {
+    return NextResponse.json(
+      {
+        error: authUser.email
+          ? "Use the email address on your account for order updates."
+          : "Your signed-in account needs an email address to place an order.",
+        field: "checkout.customer.email",
+      },
+      { status: 400 }
+    );
+  }
+  const customerEmail = authUser?.email ?? checkout.customer.email;
 
   // ---- Check payment method is enabled ----
   const paymentOptions = await getSiteSetting("payment_options", {
@@ -113,7 +129,7 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
       order_number: orderNumber,
       user_id: user?.id ?? null,
       customer_name: checkout.customer.fullName,
-      customer_email: checkout.customer.email,
+      customer_email: customerEmail,
       customer_phone: checkout.customer.phone,
       fulfillment_type: checkout.delivery.fulfillmentType,
       address_line: checkout.delivery.addressLine ?? null,
@@ -183,7 +199,7 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
   if (checkout.paymentMethod === "paystack") {
     paymentReference = `${orderNumber}-${Date.now().toString(36).toUpperCase()}`;
     const init = await initializeTransaction({
-      email: checkout.customer.email,
+      email: customerEmail,
       amountKobo: priced.total,
       reference: paymentReference,
       callbackUrl:
@@ -262,7 +278,7 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
   });
 
   void sendEmail({
-    to: checkout.customer.email,
+    to: customerEmail,
     subject: confirmation.subject,
     html: confirmation.html,
   });
@@ -293,7 +309,7 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
       to: process.env.ADMIN_EMAIL,
       subject: adminMail.subject,
       html: adminMail.html,
-      replyTo: checkout.customer.email,
+      replyTo: customerEmail,
     });
   }
 
@@ -314,7 +330,7 @@ const APP_PAYMENT_CALLBACK_URL = "jrubiecakes://checkout/result";
       bankDetails,
     });
     void sendEmail({
-      to: checkout.customer.email,
+      to: customerEmail,
       subject: transferMail.subject,
       html: transferMail.html,
     });
@@ -340,4 +356,3 @@ export function GET() {
 // Ensure formatNGN import is used (referenced in error paths in future edits)
 void formatNGN;
 void nairaToKobo;
-
