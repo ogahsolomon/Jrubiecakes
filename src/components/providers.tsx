@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
 import type { CartItem, CartItemOption } from "@/types";
 
 // ---------------- Cart ----------------
@@ -95,6 +96,24 @@ export function Providers({ children }: { children: ReactNode }) {
     }
     window.addEventListener("jrubiecakes:merge-cart", onMerge);
     return () => window.removeEventListener("jrubiecakes:merge-cart", onMerge);
+  }, []);
+
+  // Discard the device cart on sign-out so the next account cannot inherit or
+  // upload the previous user's lines. Each account's server cart is preserved.
+  useEffect(() => {
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_OUT") return;
+      setItems([]);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // storage unavailable — in-memory cart was already cleared
+      }
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   const showToast = useCallback((message: string, kind: Toast["kind"] = "success") => {

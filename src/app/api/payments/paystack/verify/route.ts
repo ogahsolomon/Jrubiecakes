@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         .from("payments")
         .update({ status: "failed", raw_payload: result.raw as never })
         .eq("reference", reference)
+        .neq("status", "paid")
         .select("id");
       if (mismatched?.[0]) {
         await recordPaymentEvent(
@@ -73,26 +74,49 @@ export async function GET(request: NextRequest) {
           PAYMENT_EVENTS.amount_mismatch,
           `Expected ${Math.round(order.total * 100)} kobo, Paystack reported ${result.amountKobo}`
         );
+        return NextResponse.json(
+          { error: "Payment amount does not match the order. Please contact support." },
+          { status: 400 }
+        );
       }
-      return NextResponse.json(
-        { error: "Payment amount does not match the order. Please contact support." },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        ok: true,
+        status: "success",
+        orderNumber: order.order_number,
+        message: "Payment already confirmed",
+      });
     }
 
     const { data: verifiedPayment } = await admin
       .from("payments")
       .update({ status: "paid", raw_payload: result.raw as never })
       .eq("reference", reference)
+      .neq("status", "paid")
       .select("id");
-    if (verifiedPayment?.[0]) {
-      await recordPaymentEvent(verifiedPayment[0].id, PAYMENT_EVENTS.verified, `Verified at Paystack (${result.status})`);
+    if (!verifiedPayment?.[0]) {
+      return NextResponse.json({
+        ok: true,
+        status: "success",
+        orderNumber: order.order_number,
+        message: "Payment already confirmed",
+      });
     }
+    await recordPaymentEvent(verifiedPayment[0].id, PAYMENT_EVENTS.verified, `Verified at Paystack (${result.status})`);
 
-    await admin
+    const { data: paidOrders } = await admin
       .from("orders")
       .update({ payment_status: "paid", order_status: "paid" })
-      .eq("id", order.id);
+      .eq("id", order.id)
+      .in("payment_status", ["pending", "processing"])
+      .select("id");
+    if (!paidOrders?.[0]) {
+      await recordPaymentEvent(
+        verifiedPayment[0].id,
+        PAYMENT_EVENTS.manually_updated,
+        "Payment was paid, but the order was no longer payable; manual review needed"
+      );
+      return NextResponse.json({ ok: true, status: "success", orderNumber: order.order_number });
+    }
 
     const confirmation = paymentConfirmedEmail({
       orderNumber: order.order_number,
@@ -130,9 +154,18 @@ export async function GET(request: NextRequest) {
     .from("payments")
     .update({ status: notPaidPaymentStatus, raw_payload: result.raw as never })
     .eq("reference", reference)
+    .neq("status", "paid")
     .select("id");
 
-  if (notPaidPayment?.[0]) {
+  if (!notPaidPayment?.[0]) {
+    return NextResponse.json({
+      ok: true,
+      status: "success",
+      orderNumber: order.order_number,
+      message: "Payment already confirmed",
+    });
+  }
+  {
     const notPaidEvent =
       notPaidPaymentStatus === "abandoned"
         ? PAYMENT_EVENTS.abandoned
