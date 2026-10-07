@@ -125,6 +125,10 @@ export function CustomCakeWizard({ product }: { product: Product }) {
       form.append("file", file);
       const res = await fetch("/api/custom-cake/upload", { method: "POST", body: form });
       const data = await res.json();
+      if (res.status === 401) {
+        setError("Please sign in to upload a reference image. You can still continue without one.");
+        return;
+      }
       if (!res.ok) {
         setError(data.error ?? "Upload failed");
         return;

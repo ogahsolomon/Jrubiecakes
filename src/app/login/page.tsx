@@ -3,11 +3,12 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeRedirectPath } from "@/lib/utils";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/account";
+  const next = safeRedirectPath(searchParams.get("next"));
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
