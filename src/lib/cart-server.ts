@@ -1,5 +1,6 @@
 ﻿import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { effectivePrice } from "@/lib/money";
 import type { CartItem, CartItemOptionRef } from "@/types";
 
 export async function fetchProductPrice(
@@ -25,7 +26,7 @@ export async function fetchProductPrice(
     return { ok: false, unitPrice: 0, error: "Product not available" };
   }
 
-  let unitPrice = (product.sale_price ?? product.price) * 100;
+  let unitPrice = effectivePrice(product.price, product.sale_price) * 100;
   if (optionRefs && optionRefs.length > 0) {
     const valueIds = optionRefs
       .map((r) => r.valueId)

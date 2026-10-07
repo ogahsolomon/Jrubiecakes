@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
+import { verifyUploadImage } from "@/lib/uploads";
 import { ORDER_STATUSES, type OrderStatus } from "@/types";
 import type { Database } from "@/types/database";
 
@@ -22,11 +23,37 @@ async function assertAdmin() {
   return user.id;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function assertUuid(value: string, label: string): string {
+  if (!UUID_RE.test(value)) throw new Error(`Invalid ${label}`);
+  return value;
+}
+
+function assertSafeProductImageUrl(url: string): string {
+  if (url.length === 0 || url.length > 1000) {
+    throw new Error("Image URL must be between 1 and 1000 characters");
+  }
+  if (/[<>"\s]/.test(url)) {
+    throw new Error("Image URL contains invalid characters");
+  }
+  if (url.startsWith("/")) {
+    if (!/^\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+$/.test(url)) {
+      throw new Error("Local image URL is invalid");
+    }
+    return url;
+  }
+  if (!/^https:\/\/[^/]+(\/\S*)?$/i.test(url)) {
+    throw new Error("Image URL must use HTTPS");
+  }
+  return url;
+}
+
 // ---------------- Orders ----------------
 
 export async function updateOrderStatus(formData: FormData) {
   await assertAdmin();
-  const orderId = String(formData.get("orderId") ?? "");
+  const orderId = assertUuid(String(formData.get("orderId") ?? ""), "order");
   const status = String(formData.get("status") ?? "");
   const notify = formData.get("notify") === "on";
 
@@ -122,7 +149,7 @@ export async function updateOrderStatus(formData: FormData) {
 
 export async function markPaymentStatus(formData: FormData) {
   await assertAdmin();
-  const paymentId = String(formData.get("paymentId") ?? "");
+  const paymentId = assertUuid(String(formData.get("paymentId") ?? ""), "payment");
   const status = String(formData.get("status") ?? "");
 
   if (!paymentId || !["pending", "processing", "awaiting_payment", "paid", "failed", "abandoned", "refunded"].includes(status)) {
@@ -196,37 +223,52 @@ export async function saveProduct(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
 
-  const id = String(formData.get("id") ?? "") || null;
+  const idRaw = String(formData.get("id") ?? "");
+  const id = idRaw ? assertUuid(idRaw, "product") : null;
   const name = String(formData.get("name") ?? "").trim();
-  const categoryId = String(formData.get("categoryId") ?? "");
+  const categoryId = assertUuid(String(formData.get("categoryId") ?? ""), "category");
   const slugInput = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const price = Number(formData.get("price"));
   const salePriceRaw = String(formData.get("salePrice") ?? "").trim();
+  const salePrice = salePriceRaw ? Number(salePriceRaw) : null;
   const isAvailable = formData.get("isAvailable") === "on";
   const isFeatured = formData.get("isFeatured") === "on";
   const isCustomizable = formData.get("isCustomizable") === "on";
   const stockRaw = String(formData.get("stockQuantity") ?? "").trim();
   const prepTimeRaw = String(formData.get("prepTimeHours") ?? "").trim();
+  const stockQuantity = stockRaw ? Number(stockRaw) : null;
+  const prepTimeHours = prepTimeRaw ? Number(prepTimeRaw) : null;
   const minQty = Number(formData.get("minOrderQuantity") ?? 1);
 
-  if (name.length < 2) throw new Error("Product name is required");
-  if (!categoryId) throw new Error("Category is required");
-  if (!Number.isFinite(price) || price < 0) throw new Error("Price must be a positive number");
+  if (name.length < 2 || name.length > 200) throw new Error("Product name must be 2–200 characters");
+  if (description.length > 5000) throw new Error("Product description is too long");
+  if (!Number.isFinite(price) || price < 0 || price > 9999999999.99) {
+    throw new Error("Price must be a positive number");
+  }
+  if (salePrice !== null && (!Number.isFinite(salePrice) || salePrice < 0 || salePrice > price)) {
+    throw new Error("Sale price must be zero or more, and cannot exceed the price");
+  }
+  if (stockQuantity !== null && (!Number.isInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 1000000)) {
+    throw new Error("Stock quantity must be a whole number");
+  }
+  if (prepTimeHours !== null && (!Number.isInteger(prepTimeHours) || prepTimeHours < 0 || prepTimeHours > 8760)) {
+    throw new Error("Preparation time must be a whole number of hours");
+  }
 
   const values = {
     name,
-    slug: slugInput ? slugify(slugInput) : slugify(name),
+    slug: (slugInput ? slugify(slugInput) : slugify(name)).slice(0, 200),
     category_id: categoryId,
     description: description || null,
     price,
-    sale_price: salePriceRaw ? Number(salePriceRaw) : null,
+    sale_price: salePrice,
     is_available: isAvailable,
     is_featured: isFeatured,
     is_customizable: isCustomizable,
-    stock_quantity: stockRaw ? Number(stockRaw) : null,
-    prep_time_hours: prepTimeRaw ? Number(prepTimeRaw) : null,
-    min_order_quantity: Number.isFinite(minQty) && minQty >= 1 ? Math.floor(minQty) : 1,
+    stock_quantity: stockQuantity,
+    prep_time_hours: prepTimeHours,
+    min_order_quantity: Number.isInteger(minQty) && minQty >= 1 && minQty <= 99 ? minQty : 1,
   };
 
   let productId = id;
@@ -247,7 +289,7 @@ export async function saveProduct(formData: FormData) {
 
 export async function archiveProduct(formData: FormData) {
   await assertAdmin();
-  const id = String(formData.get("id") ?? "");
+  const id = assertUuid(String(formData.get("id") ?? ""), "product");
   const archive = formData.get("archive") === "1";
   const admin = createAdminClient();
   const { error } = await admin.from("products").update({ is_available: !archive }).eq("id", id);
@@ -258,7 +300,7 @@ export async function archiveProduct(formData: FormData) {
 
 export async function deleteProduct(formData: FormData) {
   await assertAdmin();
-  const id = String(formData.get("id") ?? "");
+  const id = assertUuid(String(formData.get("id") ?? ""), "product");
   const admin = createAdminClient();
   const { error } = await admin.from("products").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -272,14 +314,19 @@ export async function saveProductOption(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
 
-  const productId = String(formData.get("productId") ?? "");
-  const optionId = String(formData.get("optionId") ?? "") || null;
+  const productId = assertUuid(String(formData.get("productId") ?? ""), "product");
+  const optionIdRaw = String(formData.get("optionId") ?? "");
+  const optionId = optionIdRaw ? assertUuid(optionIdRaw, "option") : null;
   const name = String(formData.get("name") ?? "").trim();
-  const type = String(formData.get("type") ?? "select") as Database["public"]["Tables"]["product_options"]["Insert"]["type"];
+  const typeInput = String(formData.get("type") ?? "select");
   const isRequired = formData.get("isRequired") === "on";
   const valuesRaw = String(formData.get("values") ?? "").trim();
 
-  if (!productId || name.length < 1) throw new Error("Option name is required");
+  if (!["select", "text", "multiline", "date", "file"].includes(typeInput)) {
+    throw new Error("Invalid option type");
+  }
+  const type = typeInput as Database["public"]["Tables"]["product_options"]["Insert"]["type"];
+  if (name.length < 1 || name.length > 100) throw new Error("Option name must be 1–100 characters");
 
   let id = optionId;
   if (optionId) {
@@ -305,12 +352,19 @@ export async function saveProductOption(formData: FormData) {
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
+      .slice(0, 50)
       .map((line, i) => {
         const [value, delta] = line.split(":");
+        const label = value.trim();
+        const priceDelta = delta ? Number(delta) : 0;
+        if (label.length < 1 || label.length > 100) throw new Error("Option values must be 1–100 characters");
+        if (!Number.isFinite(priceDelta) || priceDelta < 0 || priceDelta > 9999999999.99) {
+          throw new Error("Option price adjustments must be zero or more");
+        }
         return {
           option_id: id!,
-          value: value.trim(),
-          price_delta: delta && !Number.isNaN(Number(delta)) ? Number(delta) : 0,
+          value: label,
+          price_delta: priceDelta,
           sort_order: i,
         };
       });
@@ -326,8 +380,8 @@ export async function saveProductOption(formData: FormData) {
 
 export async function deleteProductOption(formData: FormData) {
   await assertAdmin();
-  const optionId = String(formData.get("optionId") ?? "");
-  const productId = String(formData.get("productId") ?? "");
+  const optionId = assertUuid(String(formData.get("optionId") ?? ""), "option");
+  const productId = assertUuid(String(formData.get("productId") ?? ""), "product");
   const admin = createAdminClient();
   const { error } = await admin.from("product_options").delete().eq("id", optionId);
   if (error) throw new Error(error.message);
@@ -339,23 +393,20 @@ export async function deleteProductOption(formData: FormData) {
 export async function addProductImage(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
-  const productId = String(formData.get("productId") ?? "");
+  const productId = assertUuid(String(formData.get("productId") ?? ""), "product");
   const file = formData.get("file") as File | null;
   const urlInput = String(formData.get("url") ?? "").trim();
-  const altText = String(formData.get("altText") ?? "").trim() || null;
+  const altText = String(formData.get("altText") ?? "").trim().slice(0, 200) || null;
 
-  let url = urlInput;
+  let url = urlInput ? assertSafeProductImageUrl(urlInput) : "";
 
   if (file && file.size > 0) {
-    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error("Only PNG, JPG or WebP images");
-
-    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const image = await verifyUploadImage(file);
+    const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${image.extension}`;
 
     const { error: uploadError } = await admin.storage
       .from("product-images")
-      .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: false });
+      .upload(path, image.bytes, { contentType: image.contentType, upsert: false });
 
     if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
@@ -385,8 +436,8 @@ export async function addProductImage(formData: FormData) {
 export async function setPrimaryImage(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
-  const imageId = String(formData.get("imageId") ?? "");
-  const productId = String(formData.get("productId") ?? "");
+  const imageId = assertUuid(String(formData.get("imageId") ?? ""), "image");
+  const productId = assertUuid(String(formData.get("productId") ?? ""), "product");
 
   const { data: img } = await admin
     .from("product_images")
@@ -420,8 +471,8 @@ export async function setPrimaryImage(formData: FormData) {
 export async function deleteProductImage(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
-  const imageId = String(formData.get("imageId") ?? "");
-  const productId = String(formData.get("productId") ?? "");
+  const imageId = assertUuid(String(formData.get("imageId") ?? ""), "image");
+  const productId = assertUuid(String(formData.get("productId") ?? ""), "product");
 
   const { data: img } = await admin
     .from("product_images")
@@ -447,20 +498,22 @@ export async function deleteProductImage(formData: FormData) {
 export async function saveCategory(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
-  const id = String(formData.get("id") ?? "") || null;
+  const idRaw = String(formData.get("id") ?? "");
+  const id = idRaw ? assertUuid(idRaw, "category") : null;
   const name = String(formData.get("name") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const isActive = formData.get("isActive") === "on";
 
-  if (name.length < 2) throw new Error("Category name is required");
+  if (name.length < 2 || name.length > 100) throw new Error("Category name must be 2–100 characters");
+  if (description.length > 1000) throw new Error("Category description is too long");
 
   const values = {
     name,
-    slug: slugInput ? slugify(slugInput) : slugify(name),
+    slug: (slugInput ? slugify(slugInput) : slugify(name)).slice(0, 100),
     description: description || null,
-    sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    sort_order: Number.isInteger(sortOrder) && sortOrder >= -1000 && sortOrder <= 1000 ? sortOrder : 0,
     is_active: isActive,
   };
 
@@ -478,7 +531,7 @@ export async function saveCategory(formData: FormData) {
 
 export async function deleteCategory(formData: FormData) {
   await assertAdmin();
-  const id = String(formData.get("id") ?? "");
+  const id = assertUuid(String(formData.get("id") ?? ""), "category");
   const admin = createAdminClient();
   const { error } = await admin.from("categories").delete().eq("id", id);
   if (error) {
@@ -494,9 +547,9 @@ export async function saveBankDetails(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
   const value = {
-    bankName: String(formData.get("bankName") ?? "").trim(),
-    accountNumber: String(formData.get("accountNumber") ?? "").trim(),
-    accountName: String(formData.get("accountName") ?? "").trim(),
+    bankName: String(formData.get("bankName") ?? "").trim().slice(0, 100),
+    accountNumber: String(formData.get("accountNumber") ?? "").trim().slice(0, 50),
+    accountName: String(formData.get("accountName") ?? "").trim().slice(0, 100),
   };
   const { error } = await admin.from("site_settings").upsert({ key: "bank_details", value });
   if (error) throw new Error(error.message);
@@ -520,11 +573,13 @@ export async function saveAboutStory(formData: FormData) {
 export async function saveContactSettings(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
+  const email = String(formData.get("email") ?? "").trim();
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new Error("Contact email is invalid");
   const value = {
-    phone: String(formData.get("phone") ?? "").trim(),
-    whatsapp: String(formData.get("whatsapp") ?? "").trim(),
-    email: String(formData.get("email") ?? "").trim(),
-    address: String(formData.get("address") ?? "").trim(),
+    phone: String(formData.get("phone") ?? "").trim().slice(0, 50),
+    whatsapp: String(formData.get("whatsapp") ?? "").trim().slice(0, 50),
+    email: email.slice(0, 200),
+    address: String(formData.get("address") ?? "").trim().slice(0, 500),
   };
   const { error } = await admin.from("site_settings").upsert({ key: "contact", value });
   if (error) throw new Error(error.message);
@@ -534,10 +589,18 @@ export async function saveContactSettings(formData: FormData) {
 export async function saveDeliverySettings(formData: FormData) {
   await assertAdmin();
   const admin = createAdminClient();
+  const defaultFee = Number(formData.get("defaultFee") ?? 0);
+  const leadTimeHours = Number(formData.get("leadTimeHours") ?? 48);
+  if (!Number.isFinite(defaultFee) || defaultFee < 0 || defaultFee > 1000000) {
+    throw new Error("Default delivery fee must be zero or more");
+  }
+  if (!Number.isInteger(leadTimeHours) || leadTimeHours < 0 || leadTimeHours > 720) {
+    throw new Error("Lead time must be a whole number of hours");
+  }
   const value = {
-    defaultFee: Number(formData.get("defaultFee") ?? 0),
+    defaultFee,
     pickupEnabled: formData.get("pickupEnabled") === "on",
-    leadTimeHours: Number(formData.get("leadTimeHours") ?? 48),
+    leadTimeHours,
   };
   const { error } = await admin.from("site_settings").upsert({ key: "delivery", value });
   if (error) throw new Error(error.message);
@@ -571,7 +634,7 @@ export async function savePaymentOptions(formData: FormData) {
 
 export async function approveReview(formData: FormData) {
   await assertAdmin();
-  const id = String(formData.get("id") ?? "");
+  const id = assertUuid(String(formData.get("id") ?? ""), "review");
   const approve = formData.get("approve") === "1";
   const admin = createAdminClient();
   const { error } = await admin.from("reviews").update({ is_approved: approve }).eq("id", id);

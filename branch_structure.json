@@ -1,0 +1,24 @@
+{
+  "default_branch": "master",
+  "branches": [
+    "agents/account-email-checkout",
+    "master",
+    "origin",
+    "vercel/install-vercel-speed-insights-75jdzp",
+    "vercel/react-server-components-cve-vu-nkpk1z"
+  ],
+  "parent": {
+    "agents/account-email-checkout": "master",
+    "master": null,
+    "origin": "master",
+    "vercel/install-vercel-speed-insights-75jdzp": "master",
+    "vercel/react-server-components-cve-vu-nkpk1z": "master"
+  },
+  "order": [
+    "master",
+    "agents/account-email-checkout",
+    "origin",
+    "vercel/install-vercel-speed-insights-75jdzp",
+    "vercel/react-server-components-cve-vu-nkpk1z"
+  ]
+}
