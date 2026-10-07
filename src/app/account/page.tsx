@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { isSupabaseConfigured } from "@/lib/catalog";
 import { SetupNotice } from "@/components/shop/setup-notice";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type OrderStatus } from "@/types";
@@ -77,9 +78,7 @@ export default async function AccountPage({
           {isAdmin && (
             <Link href="/admin" className="btn-outline">Admin Dashboard</Link>
           )}
-          <form action="/auth/signout" method="post">
-            <button type="submit" className="btn-ghost">Sign Out</button>
-          </form>
+          <SignOutButton className="btn-ghost" />
         </div>
       </div>
 

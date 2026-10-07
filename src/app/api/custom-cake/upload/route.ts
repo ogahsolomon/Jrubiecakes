@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRequestUser } from "@/lib/supabase/request-user";
+import { verifyUploadImage } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 /**
  * Custom cake reference image upload.
@@ -15,6 +16,13 @@ const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
  * preview — the stored path is what gets attached to the order.
  */
 export async function POST(request: NextRequest) {
+  // Reference uploads write to private Storage through the service-role key.
+  // Require a verified user so anonymous callers cannot fill the bucket.
+  const user = await getRequestUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "Please sign in to upload a reference image." }, { status: 401 });
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -22,30 +30,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Expected multipart form data" }, { status: 400 });
   }
 
-  const file = form.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  let image;
+  try {
+    image = await verifyUploadImage(form.get("file"), MAX_BYTES);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Invalid image";
+    const status = message.startsWith("Image is too large") ? 413 : 415;
+    return NextResponse.json({ error: message }, { status });
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return NextResponse.json(
-      { error: "Unsupported format — please upload a PNG, JPG or WebP image" },
-      { status: 415 }
-    );
-  }
-
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Image is too large (max 5 MB)" }, { status: 413 });
-  }
-
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const path = `references/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const path = `references/${Date.now()}-${crypto.randomUUID()}.${image.extension}`;
 
   const admin = createAdminClient();
   const { error } = await admin.storage
     .from("cake-references")
-    .upload(path, await file.arrayBuffer(), {
-      contentType: file.type,
+    .upload(path, image.bytes, {
+      contentType: image.contentType,
       upsert: false,
     });
 

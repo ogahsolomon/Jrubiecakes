@@ -39,7 +39,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Only handle charge.success; other events are acknowledged and ignored
-  if (event.event !== "charge.success" || !event.data?.reference) {
+  if (
+    event.event !== "charge.success" ||
+    typeof event.data?.reference !== "string" ||
+    event.data.reference.length === 0 ||
+    event.data.reference.length > 200
+  ) {
     return NextResponse.json({ received: true });
   }
 
@@ -80,19 +85,49 @@ export async function POST(request: NextRequest) {
     console.error(
       `[webhook] amount mismatch for ${reference}: order ${order.total * 100}, event ${event.data.amount}`
     );
+    await admin
+      .from("payments")
+      .update({ status: "failed", raw_payload: event.data as never })
+      .eq("id", payment.id);
+    await recordPaymentEvent(
+      payment.id,
+      PAYMENT_EVENTS.amount_mismatch,
+      `Order expected ${Math.round(order.total * 100)} kobo, Paystack reported ${event.data.amount}`
+    );
+    await admin
+      .from("orders")
+      .update({ payment_status: "failed" })
+      .eq("id", order.id)
+      .in("payment_status", ["pending", "processing"]);
     return NextResponse.json({ received: true, note: "amount mismatch — manual review needed" });
   }
 
-  // Update payment + order
-  await admin
+  // Update payment + order. The status guards make the transition atomic and
+  // prevent a late webhook from overwriting an admin-set state.
+  const { data: paidRows } = await admin
     .from("payments")
     .update({ status: "paid", raw_payload: event.data as never })
-    .eq("id", payment.id);
+    .eq("id", payment.id)
+    .neq("status", "paid")
+    .select("id");
+  if (!paidRows?.[0]) {
+    return NextResponse.json({ received: true, note: "already processed" });
+  }
 
-  await admin
+  const { data: paidOrders } = await admin
     .from("orders")
     .update({ payment_status: "paid", order_status: "paid" })
-    .eq("id", order.id);
+    .eq("id", order.id)
+    .in("payment_status", ["pending", "processing"])
+    .select("id");
+  if (!paidOrders?.[0]) {
+    await recordPaymentEvent(
+      payment.id,
+      PAYMENT_EVENTS.manually_updated,
+      "Payment was paid, but the order was no longer payable; manual review needed"
+    );
+    return NextResponse.json({ received: true, note: "order not payable — manual review needed" });
+  }
 
   // Emails
   const confirmation = paymentConfirmedEmail({
