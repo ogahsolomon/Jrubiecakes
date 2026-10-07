@@ -47,3 +47,24 @@ export function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
   return text.slice(0, max - 1).trimEnd() + "…";
 }
+
+/**
+ * Allow only safe same-origin login redirects. Absolute URLs,
+ * protocol-relative URLs, backslashes, encoded separators, and controls are
+ * rejected because they can send a newly authenticated user elsewhere.
+ */
+export function safeRedirectPath(raw: unknown, fallback = "/account"): string {
+  if (typeof raw !== "string" || raw.length === 0) return fallback;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return fallback;
+  if (raw.includes("\\")) return fallback;
+  if (/^\/(%2f|%5c)/i.test(raw)) return fallback;
+
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (/[\\\u0000-\u0020\u007f]/.test(decoded)) return fallback;
+  } catch {
+    return fallback;
+  }
+
+  return raw;
+}
