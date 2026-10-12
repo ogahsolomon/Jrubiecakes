@@ -12,8 +12,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization)
      * - favicon.ico
-     * - api/webhooks/paystack (webhook must work without cookies)
+     * - api/payments/paystack/webhook (webhook must work without cookies)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks/paystack|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/payments/paystack/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -1,5 +1,6 @@
 ﻿import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { customCakeSchema } from '@/lib/validation';
 import { getRequestUser } from '@/lib/supabase/request-user';
 import { jsonWithCors, preflight } from '@/lib/cors';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -18,7 +19,7 @@ const addSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().min(1).max(99).default(1),
   optionRefs: z.array(optionRefSchema).max(20).optional(),
-  customCake: z.any().optional(),
+  customCake: customCakeSchema,
 });
 
 export function OPTIONS(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       quantity,
       options: optionsForKey,
       optionRefs,
-      customCake,
+      customCake: customCake ?? undefined,
     });
   }
 

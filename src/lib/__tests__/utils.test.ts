@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateOrderNumber, slugify, truncate } from "../utils";
+import { generateOrderNumber, safeRedirectPath, slugify, truncate } from "../utils";
 
 describe("slugify", () => {
   it("slugifies product names", () => {
@@ -35,5 +35,21 @@ describe("truncate", () => {
 
   it("truncates long strings with ellipsis", () => {
     expect(truncate("hello world this is long", 10)).toBe("hello wor…");
+  });
+});
+
+describe("safeRedirectPath", () => {
+  it("allows ordinary same-origin paths", () => {
+    expect(safeRedirectPath("/")).toBe("/");
+    expect(safeRedirectPath("/account")).toBe("/account");
+    expect(safeRedirectPath("/orders/JRC-ABC123")).toBe("/orders/JRC-ABC123");
+  });
+
+  it("rejects absolute, protocol-relative, and backslash redirects", () => {
+    expect(safeRedirectPath("https://evil.example")).toBe("/account");
+    expect(safeRedirectPath("//evil.example")).toBe("/account");
+    expect(safeRedirectPath("/\\evil.example")).toBe("/account");
+    expect(safeRedirectPath("/%5cevil.example")).toBe("/account");
+    expect(safeRedirectPath("/%2fevil.example")).toBe("/account");
   });
 });

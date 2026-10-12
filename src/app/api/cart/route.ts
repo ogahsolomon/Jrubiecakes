@@ -1,5 +1,6 @@
 ﻿import { type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { customCakeSchema } from '@/lib/validation';
 import { getRequestUser } from '@/lib/supabase/request-user';
 import { jsonWithCors, preflight } from '@/lib/cors';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -30,7 +31,7 @@ const cartItemSchema = z.object({
     )
     .max(20),
   optionRefs: z.array(optionRefSchema).max(20).optional(),
-  customCake: z.any().optional(),
+  customCake: customCakeSchema,
 });
 
 const bodySchema = z.object({ items: z.array(cartItemSchema).max(50) });
