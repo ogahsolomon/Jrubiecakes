@@ -1,6 +1,20 @@
 import "server-only";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
+const PAYSTACK_CHECKOUT_HOSTS = new Set(["checkout.paystack.com", "paystack.com", "www.paystack.com"]);
+
+function assertCheckoutUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Paystack returned an invalid checkout URL");
+  }
+  if (parsed.protocol !== "https:" || !PAYSTACK_CHECKOUT_HOSTS.has(parsed.hostname)) {
+    throw new Error("Paystack returned an unexpected checkout URL");
+  }
+  return parsed.toString();
+}
 
 function secretKey(): string {
   const key = process.env.PAYSTACK_SECRET_KEY;
@@ -45,7 +59,7 @@ export async function initializeTransaction(params: {
 
     return {
       ok: true,
-      authorizationUrl: json.data.authorization_url,
+      authorizationUrl: assertCheckoutUrl(json.data.authorization_url),
       accessCode: json.data.access_code,
       reference: json.data.reference,
     };

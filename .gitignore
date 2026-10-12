@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local archive of source material (master prompt doc extraction, scratch scripts)
 /_archive
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

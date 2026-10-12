@@ -62,6 +62,18 @@ export const checkoutSchema = z.object({
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
+export const customCakeSchema = z
+  .object({
+    flavor: z.string().trim().max(200).optional(),
+    size: z.string().trim().max(200).optional(),
+    servings: z.string().trim().max(100).optional(),
+    colors: z.string().trim().max(500).optional(),
+    designNotes: z.string().trim().max(2000).optional(),
+    referenceImageUrl: z.string().trim().max(1000).nullable().optional(),
+  })
+  .strict()
+  .nullish();
+
 export const cartItemSchema = z.object({
   productId: z.string().uuid("Invalid product"),
   quantity: z.number().int().min(1).max(100),
