@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { expireStalePayments, STALE_AFTER_HOURS } from "@/lib/payment-expiry";
 
@@ -25,7 +26,14 @@ export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided = request.headers.get("authorization") ?? "";
 
-  if (!secret || provided !== `Bearer ${secret}`) {
+  const expected = `Bearer ${secret ?? ""}`;
+  const providedBuffer = Buffer.from(provided, "utf8");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  if (
+    !secret ||
+    providedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(providedBuffer, expectedBuffer)
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
